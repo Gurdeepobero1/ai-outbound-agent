@@ -7,53 +7,99 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize Groq client
-api_key = os.getenv("GROQ_API_KEY") or st.secrets["GROQ_API_KEY"] 
+api_key = os.getenv("GROQ_API_KEY") or st.secrets.get("GROQ_API_KEY")
 client = Groq(api_key=api_key)
 
-# UI
-st.set_page_config(page_title="AI Outbound Agent", layout="centered")
+# UI Configuration
+st.set_page_config(page_title="AI Outbound Agent", page_icon="🚀", layout="centered")
 
-st.title("🚀 AI Outbound Intelligence Agent")
-st.caption("Generate high-converting personalized outreach in seconds")
+st.title("🚀 Supercharged Outbound Agent")
+st.caption("Paste what you sell and who you're targeting. The AI handles the strategy and copy.")
 
-# Inputs
-product = st.text_area("Describe your product")
-icp = st.text_input("Target Audience (ICP)")
-name = st.text_input("Lead Name")
-role = st.text_input("Role")
-company = st.text_input("Company")
-tone = st.selectbox("Tone", ["Formal", "Casual", "Persuasive"])
+# --- 1. MINIMIZED INPUTS ---
+product = st.text_area(
+    "📦 What are you selling?", 
+    placeholder="e.g., We build AI voice agents for dental clinics to automate appointment bookings...", 
+    height=80
+)
+
+lead_context = st.text_area(
+    "🎯 Lead Details (Paste whatever you have)", 
+    placeholder="Paste their LinkedIn bio, a recent post they made, or just type 'John Doe, VP of Sales at TechCorp'...", 
+    height=80
+)
+
+# --- 2. PLATFORM & TONE CONTROLS ---
+col1, col2 = st.columns(2)
+with col1:
+    platform = st.selectbox("📫 Delivery Platform", ["LinkedIn DM", "Cold Email", "Twitter / X DM"])
+with col2:
+    tone = st.selectbox("🎭 Tone", ["Conversational & Crisp", "Professional & Direct", "Provocative / Pattern-Interrupt"])
 
 # Button
-if st.button("Generate Message"):
-    if not product or not icp or not name:
-        st.warning("Please fill required fields")
+if st.button("✨ Generate Best-in-Class Outreach", use_container_width=True):
+    if not product or not lead_context:
+        st.warning("Please provide both your product description and lead details.")
     else:
-        with st.spinner("Generating..."):
+        with st.spinner("Analyzing lead and crafting the perfect hook..."):
+            
+            # --- 3. DYNAMIC PLATFORM CONSTRAINTS ---
+            if platform == "LinkedIn DM":
+                constraints = """
+                - Length: STRICTLY UNDER 50 words.
+                - Format: No subject line. Short, punchy sentences.
+                - Style: Highly casual, zero fluff. DO NOT use greetings like 'I hope this finds you well' or 'Dear'.
+                - Goal: Start a conversation, not pitch immediately. 1 soft question at the end.
+                """
+            elif platform == "Cold Email":
+                constraints = """
+                - Subject Line: Create a catchy, 2-4 word subject line (lowercase often works best).
+                - Length: STRICTLY UNDER 80 words.
+                - Format: Spaced out paragraphs (1-2 sentences each maximum) for readability.
+                - Style: Professional but concise. Clear Value Proposition.
+                """
+            else: # Twitter/X
+                constraints = """
+                - Length: STRICTLY UNDER 40 words.
+                - Format: Extremely punchy, casual, text-message style. No line breaks needed.
+                - Style: High energy, direct to the point.
+                """
+
+            # --- 4. EXPERT SDR PROMPT ---
             prompt = f"""
-            You are an expert AI sales strategist.
+            You are an elite top-1% B2B Sales Development Representative (SDR) and copywriter known for booking meetings with Fortune 500 execs.
 
-            Product: {product}
-            ICP: {icp}
-            Lead: {name}, {role} at {company}
-            Tone: {tone}
+            CONTEXT:
+            - My Product/Offer: {product}
+            - Target Lead Profile: {lead_context}
 
-            Tasks:
-            1. Identify likely pain point
-            2. Write a highly personalized cold message (max 80 words)
-            3. Add 1 follow-up message
-            4. Explain in 1 line why it works
+            REQUIREMENTS:
+            - Platform: {platform}
+            - Tone: {tone}
+            {constraints}
+
+            OUTPUT EXACTLY IN THIS FORMAT:
+            ### 🧠 The Strategy
+            (1 sentence explaining the psychological angle/pain point you chose based on their profile)
+
+            ### ✍️ The Message
+            (Write the actual message here. If Email, include "Subject: ")
+
+            ### 🔄 Follow-up Message
+            (1 very short follow-up to send 3 days later if they ghost you)
             """
 
             try:
+                # Adding temperature for better creative copywriting
                 response = client.chat.completions.create(
                     model="llama-3.1-8b-instant",
-                    messages=[{"role": "user", "content": prompt}]
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7 
                 )
 
                 output = response.choices[0].message.content
 
-                st.subheader("📩 Generated Output")
+                st.divider()
                 st.write(output)
 
             except Exception as e:
